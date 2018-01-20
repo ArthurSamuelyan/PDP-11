@@ -27,12 +27,12 @@ SOURCES += \
         main.cpp \
         window.cpp \
     screenwidget.cpp \
-    codecontainer.cpp
+    codeeditor.cpp
 
 HEADERS += \
         window.h \
     screenwidget.h \
-    codecontainer.h
+    codeeditor.h
 
 FORMS += \
         window.ui

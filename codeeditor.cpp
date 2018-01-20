@@ -1,7 +1,18 @@
 #include <QtGui>
-#include "codecontainer.h"
+#include <QRegExp>
+//#include <QLineEdit>
 
-CodeContainer::CodeContainer( QWidget* parent ) : QPlainTextEdit( parent ) {
+#include "codeeditor.h"
+
+CodeEditor::CodeEditor( QWidget* parent ) : QPlainTextEdit( parent ) {
+    //QRegExp codeValidatorSyntax( "([0-7]{8}\n+){0, 1024}" );
+    //codeValidator = new QRegExpValidator( codeValidatorSyntax, this );
+    // Think of how to use.
+    // Maybe in obtaining data from file
+    // text -> regExp : buffer
+    // buffer -> uint16_t* data
+    // buffer -> via SetText -> text
+    // Weird
     _lineArea = new LineArea(this);
 
     connect( this, SIGNAL( blockCountChanged(int) ), this, SLOT( applyBlockCount(int) ) );
@@ -11,9 +22,10 @@ CodeContainer::CodeContainer( QWidget* parent ) : QPlainTextEdit( parent ) {
     _breakPoints.clear();
     applyBlockCount( 0 );
     highlightCurrentLine();
+    //setReadOnly( true ); // Uncomment this on release
 }
 
-uint CodeContainer::lineAreaWidth()
+uint CodeEditor::lineAreaWidth()
 {
     int digits;
     int max = qMax( 1, blockCount() );
@@ -22,7 +34,7 @@ uint CodeContainer::lineAreaWidth()
     return lineWidth;
 }
 
-void CodeContainer::applyBlockCount( int ) {
+void CodeEditor::applyBlockCount( int ) {
     setViewportMargins( lineAreaWidth(), 0, 0, 0 );
     if( blockCount() > _breakPoints.size() ) {
         _breakPoints.append( QVector< bool >( blockCount() - _breakPoints.size(), false ) );
@@ -31,35 +43,35 @@ void CodeContainer::applyBlockCount( int ) {
     }
 }
 
-void CodeContainer::updateLineArea( const QRect &rect, int dY ) {
+void CodeEditor::updateLineArea( const QRect &rect, int dY ) {
     ( dY ) ? _lineArea->scroll( 0, dY ) : _lineArea->update(0, rect.y(), _lineArea->width(), rect.height());
     if( rect.contains( viewport()->rect() ) )
         applyBlockCount( 0 );
 }
 
-void CodeContainer::resizeEvent( QResizeEvent* event ) {
+void CodeEditor::resizeEvent( QResizeEvent* event ) {
     QPlainTextEdit::resizeEvent( event );
     QRect _contentsRect = contentsRect();
     _lineArea->setGeometry( QRect( _contentsRect.left(), _contentsRect.top(), lineAreaWidth(), _contentsRect.height() ) );
 }
 
-void CodeContainer::highlightCurrentLine() { // add color as an arguement
+void CodeEditor::highlightCurrentLine() { // add color as an arguement
     QList<QTextEdit::ExtraSelection> extraSelections;
-    if( !isReadOnly() ) {
-        QTextEdit::ExtraSelection selection;
+    //if( !isReadOnly() ) {
+    QTextEdit::ExtraSelection selection;
 
-        QColor lineColor = QColor( Qt::yellow ).lighter(160); // Change color later
+    QColor lineColor = QColor( Qt::yellow ).lighter(160); // Change color later
 
-        selection.format.setBackground( lineColor );
-        selection.format.setProperty( QTextFormat::FullWidthSelection, true );
-        selection.cursor = textCursor();
-        selection.cursor.clearSelection();
-        extraSelections.append( selection );
-    }
+    selection.format.setBackground( lineColor );
+    selection.format.setProperty( QTextFormat::FullWidthSelection, true );
+    selection.cursor = textCursor();
+    selection.cursor.clearSelection();
+    extraSelections.append( selection );
+    //}
     setExtraSelections(extraSelections);
 }
 
-void CodeContainer::lineAreaPaintEvent( QPaintEvent *event ) {
+void CodeEditor::lineAreaPaintEvent( QPaintEvent *event ) {
     QPainter painter( _lineArea );
     painter.fillRect( event->rect(), Qt::lightGray ); // Change color later!
 
@@ -78,7 +90,7 @@ void CodeContainer::lineAreaPaintEvent( QPaintEvent *event ) {
                 painter.setPen( QPen( QBrush( QColor( Qt::red ).darker( 160 ) ), 3.0 ) );
                 painter.setBrush( QBrush( QColor( Qt::red ).darker( 140 ) ) );
                 //painter.drawText( 0, top, _lineArea->width(), fontMetrics().height(), Qt::AlignLeft, QString( " *" ) );
-                painter.drawEllipse( QPoint( 7, ( top + bottom ) / 2 - 2 ), 4, 4 );
+                painter.drawEllipse( QPoint( 7, top + 8 ), 4, 4 );
 
             }
         }
@@ -89,12 +101,20 @@ void CodeContainer::lineAreaPaintEvent( QPaintEvent *event ) {
     }
 }
 
-void CodeContainer::lineAreaClicked( QMouseEvent* event ) {
+void CodeEditor::lineAreaClicked( QMouseEvent* event ) {
     //if( event->pos().x() < ( 3 + fontMetrics().width( QLatin1Char( '9' ) ) * 2 ) ) {
-        QTextBlock firstBlock = firstVisibleBlock();
-        int top = (int)blockBoundingGeometry( firstBlock ).translated( contentOffset() ).top();
-        int blockHeight = (int)blockBoundingRect( firstBlock ).height();
-        int breakPointIndex = firstBlock.blockNumber() + ( (int)event->pos().y() - top ) / blockHeight;
+        QTextBlock currBlock = firstVisibleBlock();
+        int top = (int)blockBoundingGeometry( currBlock ).translated( contentOffset() ).top();
+        int bottom = top + (int)blockBoundingRect( currBlock ).height();
+        int breakPointIndex = currBlock.blockNumber();
+        //int blockHeight = (int)blockBoundingRect( firstBlock ).height();
+        while( currBlock.isValid() && bottom < (int)event->pos().y() ) {
+            currBlock = currBlock.next();
+            top = bottom;
+            bottom += (int)blockBoundingRect( currBlock ).height();
+            breakPointIndex++;
+        }
+        //int breakPointIndex = currBlock.blockNumber() + ( (int)event->pos().y() - top ) / blockHeight;
         if( breakPointIndex < _breakPoints.size() ) {
             _breakPoints[ breakPointIndex ] ?
                 _breakPoints[ breakPointIndex ] = false :

@@ -9,7 +9,7 @@
 #include <QTextEdit>
 
 #include "screenwidget.h"
-#include "codecontainer.h"
+#include "codeeditor.h"
 
 #include <cstdlib>
 #include <cstdint>
@@ -34,13 +34,21 @@ public:
 
     void setRegisters( uint16_t* registerValues ); // User is not supposed to change values in registers. (?)
     void setVideoMemory( uint16_t* videoMemory ); // Add shift later.
-
+private slots:
+    void newFile();
+    void openFile();
 private:
-    Ui::Window *ui;
+    void setCurrentFileName( const QString& fileName ); //
+    void loadFile( const QString& fileName );
+    void createFileMenu(); // <-- test it!
+    QString currentFileName;
+    //void createStatusBar();
+
+    //Ui::Window *ui;
 
     //QScrollArea* _programContainer;
     //QTextEdit* _programText;
-    CodeContainer* _programContainer;
+    CodeEditor* codeEditor;
 
     QLabel* _registerNames[ 8 ];
     QLabel* _registerValues[ 8 ];

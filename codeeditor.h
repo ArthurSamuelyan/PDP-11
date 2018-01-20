@@ -4,18 +4,23 @@
 #include <QPlainTextEdit>
 #include <QObject>
 #include <QWidget>
+#include <QRegExpValidator>
 
 class LineArea;
 
-class CodeContainer : public QPlainTextEdit {
+class CodeEditor : public QPlainTextEdit {
     Q_OBJECT
 public:
-    CodeContainer( QWidget* parent = 0 );
-
+    CodeEditor( QWidget* parent = 0 );
+    // methods for line area
     void lineAreaPaintEvent( QPaintEvent* event );
     uint lineAreaWidth();
     void lineAreaClicked( QMouseEvent* event );
-    QVector< bool > breakpoints() { return _breakPoints; }
+    // methods for everybody else
+    const QVector< bool >& breakpoints() { return _breakPoints; }
+
+    void setCode( uint16_t* code );
+    uint16_t* code();
 protected:
     void resizeEvent( QResizeEvent* event );
 private slots:
@@ -24,14 +29,16 @@ private slots:
     void updateLineArea( const QRect&, int );
 private:
     QWidget* _lineArea;
-    QVector< bool > _breakPoints;
+    QVector< bool > _breakPoints; // linewise breakpoints and wordwise breakpoints may not match
+                                    // asm is an extra feature, not nesessary
+    QRegExpValidator* codeValidator;
 
     // QWidget interface
 };
 
 class LineArea : public QWidget {
 public:
-    LineArea( CodeContainer* container ) : QWidget( container ) {
+    LineArea( CodeEditor* container ) : QWidget( container ) {
         _container = container;
     }
     QSize sizeHint() {
@@ -45,7 +52,7 @@ protected:
         _container->lineAreaClicked( event );
     }
 private:
-    CodeContainer* _container;
+    CodeEditor* _container;
 };
 
 #endif // CODECONTAINER_H

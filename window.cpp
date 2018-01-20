@@ -1,19 +1,100 @@
 #include "window.h"
 #include "ui_window.h"
 
+#include <QDialog>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QTextStream>
+
+// Slots:
+
+// TODO get rid of this function. We don't need editing only ability to open file!
+void Window::newFile() {
+    // if wannaSave()
+    codeEditor->clear();
+    setCurrentFileName( QString() );
+}
+
+void Window::openFile() {
+    // if wannaSave()
+    QString fileName = QFileDialog::getOpenFileName( this );
+    if( !fileName.isEmpty() )
+        loadFile( fileName );
+}
+
+// Init functions:
+
+void Window::setCurrentFileName( const QString& fileName ) {
+    currentFileName = fileName;
+    codeEditor->document()->setModified( false ); //
+    setWindowModified( false );
+
+    QString shownName = currentFileName;
+    if( currentFileName.isEmpty() )
+        shownName = "untitled.txt";
+    setWindowFilePath( shownName );
+}
+
+void Window::loadFile( const QString& fileName ) {
+    QFile file( fileName );
+    if( !file.open( QFile::ReadOnly | QFile::Text ) ) { // later set QFile::Binary !!! + convertation into text.
+        QMessageBox::warning(
+            this,
+            tr( "Application" ),
+            tr( "Cannot read file %1:\n%2." ).arg( QDir::toNativeSeparators( fileName ), file.errorString() )
+        );
+        return;
+    }
+
+    QTextStream in( &file );
+#ifndef QT_NO_CURSOR
+    QApplication::setOverrideCursor( Qt::WaitCursor );
+#endif
+    codeEditor->setPlainText( in.readAll() );
+#ifndef QT_NO_CURSOR
+    QApplication::restoreOverrideCursor();
+#endif
+
+    setCurrentFileName( fileName );
+    statusBar()->showMessage( tr( "File loaded" ), 2000 );
+}
+
+void Window::createFileMenu() {
+    QMenu *fileMenu = menuBar()->addMenu( tr( "&File" ) );
+    //QToolBar *fileToolBar = addToolBar(tr("File"));
+
+    const QIcon newIcon = QIcon::fromTheme( "document-new", QIcon( ":/images/new.png" ) );
+    QAction *newAction = new QAction( newIcon, tr( "&New" ), this );
+    newAction->setShortcuts( QKeySequence::New );
+    newAction->setStatusTip( tr( "Create a new file" ) );
+    connect( newAction, &QAction::triggered, this, &Window::newFile );
+    fileMenu->addAction( newAction );
+    //fileToolBar->addAction(newAction);
+
+    const QIcon openIcon = QIcon::fromTheme( "document-open", QIcon( ":/images/open.png" ) );
+    QAction *openAction = new QAction( openIcon, tr( "&Open..." ), this );
+    openAction->setShortcuts( QKeySequence::Open );
+    openAction->setStatusTip( tr( "Open an existing file" ) );
+    connect( openAction, &QAction::triggered, this, &Window::openFile );
+    fileMenu->addAction( openAction );
+    //fileToolBar->addAction(openAct);
+}
 
 Window::Window(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::Window)
+    codeEditor( new CodeEditor )//,
+    //ui(new Ui::Window)
 {
-    ui->setupUi( this );
+    //ui->setupUi( this );
 
     //this->setStyleSheet( "background-color: #404450;");
 
-    _programContainer = new CodeContainer;
+    //codeEditor = new CodeEditor;
+
+    createFileMenu();
 
     QVBoxLayout* _editorLayout = new QVBoxLayout;
-    _editorLayout->addWidget( _programContainer );
+    _editorLayout->addWidget( codeEditor );
 
 
 
@@ -35,6 +116,7 @@ Window::Window(QWidget *parent) :
         _registerLayoutsLocal[ i ]->addWidget( _registerValues[ i ] );
         _registerLayoutGlobal->addLayout( _registerLayoutsLocal[ i ] );
     }
+    _register_radix = 8;
 
     _emulatorScreen = new ScreenWidget;
     _emulatorScreen->initScreen( 128, 128, 8, 3 );
@@ -77,19 +159,12 @@ Window::Window(QWidget *parent) :
     cw->setLayout( _globalLayout );
     setCentralWidget( cw );
 
-    _register_radix = 8;
+
 }
 
-//QScrollArea
+Window::~Window() {}
 
-
-Window::~Window()
-{
-    delete ui;
-}
-
-void Window::setRegisters( uint16_t* registerValues )
-{
+void Window::setRegisters( uint16_t* registerValues ) {
     for( unsigned i = 0; i < 8; i++ ) {
         _registerValues[ i ]->setText( QString("<b>%1</b>").arg( registerValues[ i ], 4, _register_radix, QLatin1Char( '0' ) ) );
     }

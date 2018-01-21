@@ -23,3 +23,7 @@ void Cpu::setRegister(int number, uint16_t value){
 void Cpu::fromRegisterToMemory(int number, uint16_t * mem_offset){
     (*mem_offset) = register_[number];
 }
+
+uint16_t Cpu::getRegister(int number){
+    return register_[number];
+}

@@ -32,7 +32,8 @@ SOURCES += \
 HEADERS += \
         window.h \
     screenwidget.h \
-    codeeditor.h
+    codeeditor.h \
+    emulatorsettings.h
 
 FORMS += \
         window.ui

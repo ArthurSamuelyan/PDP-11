@@ -22,15 +22,15 @@ CodeEditor::CodeEditor( QWidget* parent ) : QPlainTextEdit( parent ) {
     _breakPoints.clear();
     applyBlockCount( 0 );
     highlightCurrentLine();
-    //setReadOnly( true ); // Uncomment this on release
+    setReadOnly( true ); // Uncomment this on release
 }
 
 uint CodeEditor::lineAreaWidth()
 {
-    int digits;
-    int max = qMax( 1, blockCount() );
-    for( digits = 1; max >= 10; digits++ )  max /= 10;
-    uint lineWidth = 3 + fontMetrics().width( QLatin1Char( '9' ) ) * ( digits + 2 ); // +2 for breakpoint
+    //int digits;
+    //int max = qMax( 1, blockCount() );
+    //for( digits = 1; max >= 10; digits++ )  max /= 10;
+    uint lineWidth = 3 + fontMetrics().width( QLatin1Char( '9' ) ) * ( 6 + 3 ); // +3 for breakpoint
     return lineWidth;
 }
 
@@ -71,7 +71,7 @@ void CodeEditor::highlightCurrentLine() { // add color as an arguement
     setExtraSelections(extraSelections);
 }
 
-void CodeEditor::lineAreaPaintEvent( QPaintEvent *event ) {
+void CodeEditor::lineAreaPaintEvent( QPaintEvent *event ) { // Alter it!
     QPainter painter( _lineArea );
     painter.fillRect( event->rect(), Qt::lightGray ); // Change color later!
 
@@ -82,7 +82,7 @@ void CodeEditor::lineAreaPaintEvent( QPaintEvent *event ) {
 
     while ( block.isValid() && top <= event->rect().bottom() ) {
         if ( block.isVisible() && bottom >= event->rect().top() ) {
-            QString number = QString::number( blockNumber + 1 );
+            QString number = QString( "%1 " ).arg( (blockNumber + currSectionStart) * 2, 6, 8, QLatin1Char( '0' ) );
             //QString number = QString( "* %1" ).arg( blockNumber + 1, 0, 10 );
             painter.setPen( Qt::black ); // change color?
             painter.drawText( 0, top, _lineArea->width(), fontMetrics().height(), Qt::AlignRight, number );
@@ -102,6 +102,7 @@ void CodeEditor::lineAreaPaintEvent( QPaintEvent *event ) {
 }
 
 void CodeEditor::lineAreaClicked( QMouseEvent* event ) {
+    if( isROM ) {
     //if( event->pos().x() < ( 3 + fontMetrics().width( QLatin1Char( '9' ) ) * 2 ) ) {
         QTextBlock currBlock = firstVisibleBlock();
         int top = (int)blockBoundingGeometry( currBlock ).translated( contentOffset() ).top();
@@ -122,6 +123,42 @@ void CodeEditor::lineAreaClicked( QMouseEvent* event ) {
             _lineArea->repaint();
         }
     //}
+    }
 }
 
+void CodeEditor::setEmulatorMemory( uint16_t* code ) {
+    _emulatorMemory = code;
+}
+void CodeEditor::displayEmulatorMemory( uint16_t address ) {
+    if( address >= RAM_START * 2 ) {
+        currSectionStart = RAM_START;
+        currSectionSize = RAM_SIZE;
+        isROM = false;
+    }
+    if( address >= VRAM_START * 2 ) {
+        currSectionStart = VRAM_START;
+        currSectionSize = VRAM_SIZE;
+        isROM = false;
+    }
+    if( address >= ROM_START * 2 ) {
+        currSectionStart = ROM_START;
+        currSectionSize = ROM_SIZE;
+        isROM = true;
+    }
+    if( address >= IO_START * 2 ) {
+        currSectionStart = IO_START;
+        currSectionSize = IO_SIZE;
+        isROM = false;
+    }
+    /// finish it!
+    QString text = QString();
+    for( uint16_t i = currSectionStart; i < currSectionStart + currSectionSize; i++) {
 
+        text.append( QString( " %1\n" ).arg( _emulatorMemory[ i ], 6, 8, QLatin1Char( '0' ) )  );
+    }
+    setPlainText( text );
+
+    QTextCursor cursor = textCursor();
+    cursor.setPosition( address / 2 - currSectionStart );
+    ///
+}

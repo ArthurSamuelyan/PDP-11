@@ -1,6 +1,8 @@
 #ifndef CODECONTAINER_H
 #define CODECONTAINER_H
 
+#include "emulatorsettings.h"
+
 #include <QPlainTextEdit>
 #include <QObject>
 #include <QWidget>
@@ -16,11 +18,14 @@ public:
     void lineAreaPaintEvent( QPaintEvent* event );
     uint lineAreaWidth();
     void lineAreaClicked( QMouseEvent* event );
+    // methods for hat Area:
+    void hatAreaPaintEvent( QPaintEvent* event ); // finish it!
     // methods for everybody else
     const QVector< bool >& breakpoints() { return _breakPoints; }
 
-    void setCode( uint16_t* code );
-    uint16_t* code();
+    void setEmulatorMemory( uint16_t* code );
+    void displayEmulatorMemory( uint16_t address );
+    uint16_t* emulatorMemory() { return _emulatorMemory; }
 protected:
     void resizeEvent( QResizeEvent* event );
 private slots:
@@ -28,6 +33,12 @@ private slots:
     void highlightCurrentLine();
     void updateLineArea( const QRect&, int );
 private:
+    uint16_t* _emulatorMemory;
+    uint16_t currSectionStart;
+    uint16_t currSectionSize;
+    bool isROM;
+
+    QWidget* _hatArea; // for displaying a current open file
     QWidget* _lineArea;
     QVector< bool > _breakPoints; // linewise breakpoints and wordwise breakpoints may not match
                                     // asm is an extra feature, not nesessary

@@ -6,14 +6,16 @@
 #include <QMessageBox>
 #include <QTextStream>
 
+
+
 // Slots:
 
 // TODO get rid of this function. We don't need editing only ability to open file!
-void Window::newFile() {
-    // if wannaSave()
-    codeEditor->clear();
-    setCurrentFileName( QString() );
-}
+//void Window::newFile() {
+//    // if wannaSave()
+//    codeEditor->clear();
+//    setCurrentFileName( QString() );
+//}
 
 void Window::openFile() {
     // if wannaSave()
@@ -31,13 +33,14 @@ void Window::setCurrentFileName( const QString& fileName ) {
 
     QString shownName = currentFileName;
     if( currentFileName.isEmpty() )
-        shownName = "untitled.txt";
+        shownName = "untitled.txt"; // "no file"
     setWindowFilePath( shownName );
 }
 
 void Window::loadFile( const QString& fileName ) {
     QFile file( fileName );
-    if( !file.open( QFile::ReadOnly | QFile::Text ) ) { // later set QFile::Binary !!! + convertation into text.
+    //if( !file.open( QFile::ReadOnly | QFile::Text ) ) { // later set QFile::Binary !!! + convertation into text.
+    if( !file.open( QFile::ReadOnly ) ) {
         QMessageBox::warning(
             this,
             tr( "Application" ),
@@ -46,11 +49,23 @@ void Window::loadFile( const QString& fileName ) {
         return;
     }
 
-    QTextStream in( &file );
+
+    //QTextStream in( &file );
 #ifndef QT_NO_CURSOR
     QApplication::setOverrideCursor( Qt::WaitCursor );
 #endif
-    codeEditor->setPlainText( in.readAll() );
+    // fill ROM:
+    file.read( (char*)(&emulatorMemory[ ROM_START ]), ROM_SIZE * sizeof( uint16_t) );
+    codeEditor->setEmulatorMemory( emulatorMemory );
+    codeEditor->displayEmulatorMemory( ROM_START * 2 );
+    if( file.size() > ROM_SIZE * 2 ) {
+        QMessageBox::warning(
+            this,
+            tr( "Application" ),
+            tr( "File is too big. Loaded partly %1." ).arg( QDir::toNativeSeparators( fileName ) )
+        );
+    }
+    //codeEditor->setPlainText( in.readAll() );
 #ifndef QT_NO_CURSOR
     QApplication::restoreOverrideCursor();
 #endif
@@ -63,12 +78,12 @@ void Window::createFileMenu() {
     QMenu *fileMenu = menuBar()->addMenu( tr( "&File" ) );
     //QToolBar *fileToolBar = addToolBar(tr("File"));
 
-    const QIcon newIcon = QIcon::fromTheme( "document-new", QIcon( ":/images/new.png" ) );
-    QAction *newAction = new QAction( newIcon, tr( "&New" ), this );
-    newAction->setShortcuts( QKeySequence::New );
-    newAction->setStatusTip( tr( "Create a new file" ) );
-    connect( newAction, &QAction::triggered, this, &Window::newFile );
-    fileMenu->addAction( newAction );
+    //const QIcon newIcon = QIcon::fromTheme( "document-new", QIcon( ":/images/new.png" ) );
+    //QAction *newAction = new QAction( newIcon, tr( "&New" ), this );
+    //newAction->setShortcuts( QKeySequence::New );
+    //newAction->setStatusTip( tr( "Create a new file" ) );
+    //connect( newAction, &QAction::triggered, this, &Window::newFile );
+    //fileMenu->addAction( newAction );
     //fileToolBar->addAction(newAction);
 
     const QIcon openIcon = QIcon::fromTheme( "document-open", QIcon( ":/images/open.png" ) );
@@ -85,6 +100,10 @@ Window::Window(QWidget *parent) :
     codeEditor( new CodeEditor )//,
     //ui(new Ui::Window)
 {
+    emulatorMemory = new uint16_t[ MEM_SIZE ];
+    for( uint16_t i = 0; i < MEM_SIZE; i++ )
+        emulatorMemory[ i ] = 0;
+
     //ui->setupUi( this );
 
     //this->setStyleSheet( "background-color: #404450;");
@@ -93,7 +112,10 @@ Window::Window(QWidget *parent) :
 
     createFileMenu();
 
+    searchLine = new QLineEdit;
+
     QVBoxLayout* _editorLayout = new QVBoxLayout;
+    _editorLayout->addWidget( searchLine );
     _editorLayout->addWidget( codeEditor );
 
 
@@ -102,14 +124,19 @@ Window::Window(QWidget *parent) :
     QHBoxLayout* _registerLayoutGlobal = new QHBoxLayout;
     for( unsigned i = 0; i < 8; i++ ) {
         _registerNames[ i ] = new QLabel;
-        _registerValues[ i ] = new QLabel;
+        _registerValues[ i ] = new QLineEdit;
         _registerLayoutsLocal[ i ] = new QVBoxLayout;
 
         _registerNames[ i ]->setStyleSheet( "background-color: #ffaa44; color: #000000;");
         _registerNames[ i ]->setText(
             QString( "<b><font color=#660000>R</font>%1</b>" ).arg( i, 0, 8 ) );
         _registerNames[ i ]->setAlignment( Qt::Alignment( Qt::AlignHCenter ) );
-        _registerValues[ i ]->setText("<b>0000</b>");
+
+        _registerValues[ i ]->setReadOnly( true );
+        //_registerValues[ i ]->setBaseSize( 100, 20 );
+        _registerValues[ i ]->setMaximumSize( 80, 20 ); // Change it?
+        _registerValues[ i ]->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
+        _registerValues[ i ]->setText("0000");
         _registerValues[ i ]->setAlignment( Qt::Alignment( Qt::AlignHCenter ) );
 
         _registerLayoutsLocal[ i ]->addWidget( _registerNames[ i ] );
@@ -119,8 +146,11 @@ Window::Window(QWidget *parent) :
     _register_radix = 8;
 
     _emulatorScreen = new ScreenWidget;
-    _emulatorScreen->initScreen( 128, 128, 8, 3 );
-    _emulatorScreen->testScreen();
+    _emulatorScreen->initScreen( 256, 256, 2, 2 );
+    for( uint i = 0; i < 8; i++ )
+        _registerValues[ i ]->setMaximumWidth( _emulatorScreen->width() / 8 - 2 * 5 );
+    //_emulatorScreen->initScreen( 128, 128, 8, 3 );
+    //_emulatorScreen->testScreen();
 
     _startEmulation         = new QPushButton;
     _startWithBreakpoints   = new QPushButton;
@@ -166,7 +196,7 @@ Window::~Window() {}
 
 void Window::setRegisters( uint16_t* registerValues ) {
     for( unsigned i = 0; i < 8; i++ ) {
-        _registerValues[ i ]->setText( QString("<b>%1</b>").arg( registerValues[ i ], 4, _register_radix, QLatin1Char( '0' ) ) );
+        _registerValues[ i ]->setText( QString("%1").arg( registerValues[ i ], 4, _register_radix, QLatin1Char( '0' ) ) );
     }
 }
 

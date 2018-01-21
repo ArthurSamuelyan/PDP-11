@@ -1,12 +1,15 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
+#include "emulatorsettings.h"
+
 #include <QMainWindow>
 #include <QLabel>
 #include <QLayout>
 #include <QPushButton>
-#include <QScrollArea>
+//#include <QScrollArea>
 #include <QTextEdit>
+#include <QLineEdit>
 
 #include "screenwidget.h"
 #include "codeeditor.h"
@@ -35,7 +38,7 @@ public:
     void setRegisters( uint16_t* registerValues ); // User is not supposed to change values in registers. (?)
     void setVideoMemory( uint16_t* videoMemory ); // Add shift later.
 private slots:
-    void newFile();
+    //void newFile();
     void openFile();
 private:
     void setCurrentFileName( const QString& fileName ); //
@@ -48,10 +51,12 @@ private:
 
     //QScrollArea* _programContainer;
     //QTextEdit* _programText;
+    QLineEdit* searchLine;
     CodeEditor* codeEditor;
 
     QLabel* _registerNames[ 8 ];
-    QLabel* _registerValues[ 8 ];
+    //QLabel* _registerValues[ 8 ];
+    QLineEdit* _registerValues[ 8 ];
 
     ScreenWidget* _emulatorScreen;
 
@@ -62,6 +67,8 @@ private:
     QPushButton* _stopEmulation;
 
     int _register_radix;
+
+    uint16_t* emulatorMemory;
 };
 
 #endif // WINDOW_H

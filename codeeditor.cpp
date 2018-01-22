@@ -23,6 +23,9 @@ CodeEditor::CodeEditor( QWidget* parent ) : QPlainTextEdit( parent ) {
     applyBlockCount( 0 );
     highlightCurrentLine();
     setReadOnly( true ); // Uncomment this on release
+
+    currSectionStart = 0;
+    currSectionSize = 0;
 }
 
 uint CodeEditor::lineAreaWidth()

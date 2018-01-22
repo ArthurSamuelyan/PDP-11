@@ -27,13 +27,17 @@ SOURCES += \
         main.cpp \
         window.cpp \
     screenwidget.cpp \
-    codeeditor.cpp
+    codeeditor.cpp \
+    cpu.cpp \
+    instructionhandler.cpp
 
 HEADERS += \
         window.h \
     screenwidget.h \
     codeeditor.h \
-    emulatorsettings.h
+    emulatorsettings.h \
+    cpu.h \
+    instructionhandler.h
 
 FORMS += \
         window.ui

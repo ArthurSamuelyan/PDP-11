@@ -95,24 +95,34 @@ void Window::createFileMenu() {
     //fileToolBar->addAction(openAct);
 }
 
+void Window::setDisplayAddress() {
+    uint16_t address = (uint16_t)strtoul( searchLine->text().toLatin1().data(), NULL, 8 );
+    codeEditor->displayEmulatorMemory( address );
+}
+
 Window::Window(QWidget *parent) :
     QMainWindow(parent),
     codeEditor( new CodeEditor )//,
     //ui(new Ui::Window)
 {
-    emulatorMemory = new uint16_t[ MEM_SIZE ];
+    //emulatorMemory = new uint16_t[ MEM_SIZE ];
     for( uint16_t i = 0; i < MEM_SIZE; i++ )
         emulatorMemory[ i ] = 0;
+    codeEditor->setEmulatorMemory( emulatorMemory );
+    for( uint16_t i = 0; i < 8; i++ )
+        emulatorRegisters[ i ] = 0;
 
     //ui->setupUi( this );
-
     //this->setStyleSheet( "background-color: #404450;");
-
     //codeEditor = new CodeEditor;
 
     createFileMenu();
 
     searchLine = new QLineEdit;
+    QRegExp addressCheck("[0-1]{0,1}[0-7]{1,5}");
+    QValidator* val = new QRegExpValidator( addressCheck, this );
+    searchLine->setValidator( val );
+    connect( searchLine, &QLineEdit::returnPressed, this, &Window::setDisplayAddress ); // debug it!
 
     QVBoxLayout* _editorLayout = new QVBoxLayout;
     _editorLayout->addWidget( searchLine );
@@ -136,7 +146,7 @@ Window::Window(QWidget *parent) :
         //_registerValues[ i ]->setBaseSize( 100, 20 );
         _registerValues[ i ]->setMaximumSize( 80, 20 ); // Change it?
         _registerValues[ i ]->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
-        _registerValues[ i ]->setText("0000");
+        _registerValues[ i ]->setText("000000");
         _registerValues[ i ]->setAlignment( Qt::Alignment( Qt::AlignHCenter ) );
 
         _registerLayoutsLocal[ i ]->addWidget( _registerNames[ i ] );
@@ -194,12 +204,12 @@ Window::Window(QWidget *parent) :
 
 Window::~Window() {}
 
-void Window::setRegisters( uint16_t* registerValues ) {
+void Window::updateRegisters() {
     for( unsigned i = 0; i < 8; i++ ) {
-        _registerValues[ i ]->setText( QString("%1").arg( registerValues[ i ], 4, _register_radix, QLatin1Char( '0' ) ) );
+        _registerValues[ i ]->setText( QString("%1").arg( emulatorRegisters[ i ], 6, _register_radix, QLatin1Char( '0' ) ) );
     }
 }
 
-void Window::setVideoMemory(uint16_t* videoMemory ) {
-    _emulatorScreen->updateSource( videoMemory );
+void Window::updateVideoMemory() {
+    _emulatorScreen->updateSource( &emulatorMemory[ VRAM_START ] );
 }

@@ -35,11 +35,15 @@ public:
     explicit Window(QWidget *parent = 0);
     ~Window();
 
-    void setRegisters( uint16_t* registerValues ); // User is not supposed to change values in registers. (?)
-    void setVideoMemory( uint16_t* videoMemory ); // Add shift later.
+    void updateRegisters(); // User is not supposed to change values in registers. (?)
+    void updateVideoMemory(); // Add shift later.
+
+    uint16_t emulatorRegisters[ 8 ];
+    uint16_t emulatorMemory[ MEM_SIZE ];
 private slots:
     //void newFile();
     void openFile();
+    void setDisplayAddress();
 private:
     void setCurrentFileName( const QString& fileName ); //
     void loadFile( const QString& fileName );
@@ -68,7 +72,7 @@ private:
 
     int _register_radix;
 
-    uint16_t* emulatorMemory;
+    //uint16_t* emulatorMemory;
 };
 
 #endif // WINDOW_H

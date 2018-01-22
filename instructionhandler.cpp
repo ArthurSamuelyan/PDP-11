@@ -127,6 +127,11 @@ instructionInfo InstructionHandler::getInfo(uint16_t instr){
         info.source_mode = (instr >> 9) & 0b0000000000000111;
         info.byte = false;
     }
+    else if ((instr & 0b1111111100000000) == 0b1000011100000000){
+        info.instruction = BLO;
+        info.opcode = instr >> 8;
+        info.dest = instr & 0b0000000011111111;
+    }
     return info;
 }
 
@@ -145,6 +150,41 @@ void InstructionHandler::performInstruction(instructionInfo info){
             uint16_t * dest_ptr = getContents(cpu, info.dest_mode, info.dest, memory, (uint16_t*)(cpu->getRegister(7) / 2), &pc_increase);
             *dest_ptr = *source_ptr;
             cpu->increaseRegister(7, pc_increase * 2);
+        };
+        case(CMP):
+        {
+            uint16_t * source_ptr = getContents(cpu, info.source_mode, info.source, memory, (uint16_t*)(cpu->getRegister(7) / 2), &pc_increase);
+            uint16_t * dest_ptr = getContents(cpu, info.dest_mode, info.dest, memory, (uint16_t*)(cpu->getRegister(7) / 2), &pc_increase);
+            uint32_t result = (uint32_t)(*source_ptr) + (0x10000u - (uint32_t)(*dest_ptr));         //
+            ((result & 0x8000) != 0) ? cpu->N = true : cpu->N = false;
+            ((result & 0xffff) == 0) ? cpu->Z = true : cpu->Z = false;
+            ((result & 0x10000) != 0) ? cpu->C = false : cpu->C = true;
+            cpu->increaseRegister(7, pc_increase * 2);
+        };
+        case(ADD):
+        {
+            uint16_t * source_ptr = getContents(cpu, info.source_mode, info.source, memory, (uint16_t*)(cpu->getRegister(7) / 2), &pc_increase);
+            uint16_t * dest_ptr = getContents(cpu, info.dest_mode, info.dest, memory, (uint16_t*)(cpu->getRegister(7) / 2), &pc_increase);
+            (*dest_ptr) += (*source_ptr);
+            cpu->increaseRegister(7, pc_increase * 2);
+        };
+        case(SUB):
+        {
+            uint16_t * source_ptr = getContents(cpu, info.source_mode, info.source, memory, (uint16_t*)(cpu->getRegister(7) / 2), &pc_increase);
+            uint16_t * dest_ptr = getContents(cpu, info.dest_mode, info.dest, memory, (uint16_t*)(cpu->getRegister(7) / 2), &pc_increase);
+            (*dest_ptr) += (*source_ptr);
+            cpu->increaseRegister(7, pc_increase * 2);
+        };
+        case(BLO):
+        {
+            cpu->increaseRegister(7, pc_increase * 2);
+            if (cpu->C){
+                uint8_t offset = (uint8_t)(info.dest & 0b01111111);
+                if (info.dest & 0b10000000){                        //check offset sign
+                    cpu->decreaseRegister(7, offset * 2);
+                }
+                else cpu->increaseRegister(7, offset * 2);
+            }
         }
     }
 }

@@ -8,7 +8,8 @@ enum Instructions{
     MOV,
     CMP,
     ADD,
-    SUB
+    SUB,
+    BLO
 
 };
 
